@@ -47,14 +47,25 @@ tests.test_load_vgg(load_vgg, tf)
 def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     """
     Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
-    :param vgg_layer7_out: TF Tensor for VGG Layer 3 output
+    :param vgg_layer3_out: TF Tensor for VGG Layer 3 output
     :param vgg_layer4_out: TF Tensor for VGG Layer 4 output
-    :param vgg_layer3_out: TF Tensor for VGG Layer 7 output
+    :param vgg_layer7_out: TF Tensor for VGG Layer 7 output
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
     # TODO: Implement function
-    return None
+
+    conv1x1 = tf.layers.conv2d(vgg_layer7_out, 4096, 1, 1)
+
+    # upconv1 = tf.layers.conv2d_transpose(conv1x1, 1024, (4, 4), (4, 4))
+    # upconv2 = tf.layers.conv2d_transpose(upconv1, 256, (4, 4), (4, 4))
+    # upconv3 = tf.layers.conv2d_transpose(upconv2, 64, (4, 4), (4, 4))
+
+    upconv4 = tf.layers.conv2d_transpose(conv1x1, num_classes, (4, 4), (4, 4))
+    # 2xconv4 = tf.layers.conv2d_transpose(vgg_layer4_out, 1024, (2, 2), (2, 2))
+    # 1xconv3 = tf.layers.conv2d_transpose(vgg_layer3_out, 1024, (1, 1), (1, 1))
+
+    return upconv4
 tests.test_layers(layers)
 
 
