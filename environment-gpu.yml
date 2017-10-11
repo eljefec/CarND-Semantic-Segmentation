@@ -1,0 +1,14 @@
+name: fcn
+channels:
+    - https://conda.anaconda.org/menpo
+    - conda-forge
+dependencies:
+    - python==3.6
+    - numpy>=1.13.1
+    - opencv3
+    - h5py
+    - scipy
+    - pip:
+        - tensorflow-gpu>=1.0.0
+        # - https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.0.0-cp27-none-linux_x86_64.whl
+        - tqdm
