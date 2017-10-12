@@ -41,6 +41,7 @@ def load_vgg(sess, vgg_path):
             graph.get_tensor_by_name(vgg_layer3_out_tensor_name),
             graph.get_tensor_by_name(vgg_layer4_out_tensor_name),
             graph.get_tensor_by_name(vgg_layer7_out_tensor_name))
+
 tests.test_load_vgg(load_vgg, tf)
 
 
@@ -66,6 +67,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     # 1xconv3 = tf.layers.conv2d_transpose(vgg_layer3_out, 1024, (1, 1), (1, 1))
 
     return upconv4
+
 tests.test_layers(layers)
 
 
@@ -78,8 +80,19 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :param num_classes: Number of classes to classify
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
-    # TODO: Implement function
-    return None, None, None
+    logits = tf.contrib.layers.flatten(nn_last_layer)
+    flat_label = tf.contrib.layers.flatten(correct_label)
+
+    one_hot = tf.one_hot(tf.argmax(flat_label, axis=1), num_classes)
+
+    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot, logits=logits)
+    cross_entropy_loss = tf.reduce_mean(cross_entropy)
+
+    optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
+    train_op = optimizer.minimize(cross_entropy_loss)
+
+    return logits, train_op, cross_entropy_loss
+
 tests.test_optimize(optimize)
 
 
