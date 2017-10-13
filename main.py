@@ -119,7 +119,6 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                                             correct_label: labels,
                                             keep_prob: 1.0,
                                             learning_rate: 0.001})
-            # loss = sess.run([cross_entropy_loss], feed_dict = {correct_label: labels})
         print('EPOCH {}, loss = {}'.format(i+1, loss))
 
 tests.test_train_nn(train_nn)
