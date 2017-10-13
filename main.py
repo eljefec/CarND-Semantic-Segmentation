@@ -41,6 +41,7 @@ def load_vgg(sess, vgg_path):
             graph.get_tensor_by_name(vgg_layer3_out_tensor_name),
             graph.get_tensor_by_name(vgg_layer4_out_tensor_name),
             graph.get_tensor_by_name(vgg_layer7_out_tensor_name))
+
 tests.test_load_vgg(load_vgg, tf)
 
 
@@ -53,19 +54,20 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
-    # TODO: Implement function
+    # Layers are based on https://github.com/developmentseed/caffe-fcn/blob/master/fcn-8s/train_val.prototxt
+    score = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1)
 
-    conv1x1 = tf.layers.conv2d(vgg_layer7_out, 4096, 1, 1)
+    upscore2 = tf.layers.conv2d_transpose(score, num_classes, 4, 2)
+    score_pool4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1)
+    score_fused = tf.add(upscore2, score_pool4)
 
-    # upconv1 = tf.layers.conv2d_transpose(conv1x1, 1024, (4, 4), (4, 4))
-    # upconv2 = tf.layers.conv2d_transpose(upconv1, 256, (4, 4), (4, 4))
-    # upconv3 = tf.layers.conv2d_transpose(upconv2, 64, (4, 4), (4, 4))
+    score4 = tf.layers.conv2d_transpose(score_fused, num_classes, 4, 2)
+    score_pool3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1)
 
-    upconv4 = tf.layers.conv2d_transpose(conv1x1, num_classes, (4, 4), (4, 4))
-    # 2xconv4 = tf.layers.conv2d_transpose(vgg_layer4_out, 1024, (2, 2), (2, 2))
-    # 1xconv3 = tf.layers.conv2d_transpose(vgg_layer3_out, 1024, (1, 1), (1, 1))
+    score_final = tf.add(score4, score_pool3)
 
-    return upconv4
+    return score_final
+
 tests.test_layers(layers)
 
 
@@ -78,8 +80,17 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :param num_classes: Number of classes to classify
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
-    # TODO: Implement function
-    return None, None, None
+    logits = tf.reshape(nn_last_layer, (-1, num_classes))
+    labels = tf.reshape(correct_label, (-1, num_classes))
+
+    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=logits)
+    cross_entropy_loss = tf.reduce_mean(cross_entropy)
+
+    optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
+    train_op = optimizer.minimize(cross_entropy_loss)
+
+    return logits, train_op, cross_entropy_loss
+
 tests.test_optimize(optimize)
 
 
@@ -98,8 +109,19 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
-    # TODO: Implement function
-    pass
+    sess.run(tf.global_variables_initializer())
+
+    for i in range(epochs):
+        print('EPOCH {} of {}'.format(i+1, epochs))
+        for images, labels in get_batches_fn(batch_size):
+            _, loss = sess.run([train_op, cross_entropy_loss],
+                               feed_dict = {input_image: images,
+                                            correct_label: labels,
+                                            keep_prob: 1.0,
+                                            learning_rate: 0.001})
+            # loss = sess.run([cross_entropy_loss], feed_dict = {correct_label: labels})
+        print('EPOCH {}, loss = {}'.format(i+1, loss))
+
 tests.test_train_nn(train_nn)
 
 
@@ -126,9 +148,15 @@ def run():
         # OPTIONAL: Augment Images for better results
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
-        # TODO: Build NN using load_vgg, layers, and optimize function
+        input_image, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
+        score_final = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
+        correct_label = tf.placeholder(tf.float32, [None, None, None, num_classes])
+        learning_rate = tf.placeholder(tf.float32)
+        logits, train_op, cross_entropy_loss = optimize(score_final, correct_label, learning_rate, num_classes)
 
-        # TODO: Train NN using the train_nn function
+        epochs = 2
+        batch_size = 2
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate)
 
         # TODO: Save inference data using helper.save_inference_samples
         #  helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
