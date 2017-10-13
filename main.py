@@ -80,12 +80,10 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :param num_classes: Number of classes to classify
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
-    logits = tf.contrib.layers.flatten(nn_last_layer)
-    flat_label = tf.contrib.layers.flatten(correct_label)
+    logits = tf.reshape(nn_last_layer, (-1, num_classes))
+    labels = tf.reshape(correct_label, (-1, num_classes))
 
-    one_hot = tf.one_hot(tf.argmax(flat_label, axis=1), num_classes)
-
-    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot, logits=logits)
+    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=logits)
     cross_entropy_loss = tf.reduce_mean(cross_entropy)
 
     optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
