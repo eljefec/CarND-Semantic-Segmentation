@@ -54,19 +54,19 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
-    # TODO: Implement function
+    # Layers are based on https://github.com/developmentseed/caffe-fcn/blob/master/fcn-8s/train_val.prototxt
+    score = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1)
 
-    conv1x1 = tf.layers.conv2d(vgg_layer7_out, 4096, 1, 1)
+    upscore2 = tf.layers.conv2d_transpose(score, num_classes, 4, 2)
 
-    # upconv1 = tf.layers.conv2d_transpose(conv1x1, 1024, (4, 4), (4, 4))
-    # upconv2 = tf.layers.conv2d_transpose(upconv1, 256, (4, 4), (4, 4))
-    # upconv3 = tf.layers.conv2d_transpose(upconv2, 64, (4, 4), (4, 4))
+    score_pool4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1)
+    score_fused = tf.add(upscore2, score_pool4)
+    score4 = tf.layers.conv2d_transpose(score_fused, num_classes, 4, 2)
 
-    upconv4 = tf.layers.conv2d_transpose(conv1x1, num_classes, (4, 4), (4, 4))
-    # 2xconv4 = tf.layers.conv2d_transpose(vgg_layer4_out, 1024, (2, 2), (2, 2))
-    # 1xconv3 = tf.layers.conv2d_transpose(vgg_layer3_out, 1024, (1, 1), (1, 1))
+    score_pool3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1)
+    score_final = tf.add(score4, score_pool3)
 
-    return upconv4
+    return score_final
 
 tests.test_layers(layers)
 
