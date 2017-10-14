@@ -155,9 +155,9 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                                             learning_rate: 0.001})
         print('EPOCH {}, loss = {}'.format(i+1, loss))
 
-    if checkpoint_dir:
-        saver.save(sess, os.path.join(checkpoint_dir, 'checkpoint'), global_step = stop_epoch - 1)
-        print('Saved checkpoint at epoch {}'.format(stop_epoch - 1))
+        if checkpoint_dir:
+            saver.save(sess, os.path.join(checkpoint_dir, 'checkpoint'), global_step = i)
+            print('Saved checkpoint at epoch {}'.format(i))
 
 tests.test_train_nn(train_nn)
 
@@ -192,16 +192,12 @@ def run():
         learning_rate = tf.placeholder(tf.float32)
         logits, train_op, cross_entropy_loss = optimize(score_final, correct_label, learning_rate, num_classes)
 
-        epochs = 5
+        epochs = 10
         batch_size = 1
 
-        epoch_batches = 10
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate, checkpoint_dir)
 
-        for i in range(epoch_batches):
-            print('EPOCH BATCH {} of {}'.format(i+1, epoch_batches))
-            train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate, checkpoint_dir)
-
-            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
 
