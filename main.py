@@ -1,6 +1,7 @@
 import os.path
 import tensorflow as tf
 import helper
+import time
 import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
@@ -100,7 +101,7 @@ tests.test_optimize(optimize)
 
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
-             correct_label, keep_prob, learning_rate):
+             correct_label, keep_prob, learning_rate, checkpoint_dir = None):
     """
     Train neural network and print out the loss during training.
     :param sess: TF Session
@@ -116,15 +117,22 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     """
     sess.run(tf.global_variables_initializer())
 
+    if checkpoint_dir:
+        saver = tf.train.Saver()
+        if not os.path.exists(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+
     for i in range(epochs):
         print('EPOCH {} of {}'.format(i+1, epochs))
         for images, labels in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss],
                                feed_dict = {input_image: images,
                                             correct_label: labels,
-                                            keep_prob: 1.0,
+                                            keep_prob: 0.5,
                                             learning_rate: 0.001})
         print('EPOCH {}, loss = {}'.format(i+1, loss))
+        if checkpoint_dir:
+            saver.save(sess, os.path.join(checkpoint_dir, 'fcn-checkpoint'), global_step=i)
 
 tests.test_train_nn(train_nn)
 
@@ -134,6 +142,7 @@ def run():
     image_shape = (160, 576)
     data_dir = './data'
     runs_dir = './runs'
+    checkpoint_dir = './checkpoints'
     tests.test_for_kitti_dataset(data_dir)
 
     # Download pretrained vgg model
@@ -158,12 +167,11 @@ def run():
         learning_rate = tf.placeholder(tf.float32)
         logits, train_op, cross_entropy_loss = optimize(score_final, correct_label, learning_rate, num_classes)
 
-        epochs = 2
-        batch_size = 2
-        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate)
+        epochs = 5
+        batch_size = 1
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate, checkpoint_dir)
 
-        # TODO: Save inference data using helper.save_inference_samples
-        #  helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
 
