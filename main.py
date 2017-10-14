@@ -192,7 +192,7 @@ def run():
         learning_rate = tf.placeholder(tf.float32)
         logits, train_op, cross_entropy_loss = optimize(score_final, correct_label, learning_rate, num_classes)
 
-        epochs = 10
+        epochs = 16
         batch_size = 1
 
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate, checkpoint_dir)
