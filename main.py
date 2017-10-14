@@ -46,6 +46,16 @@ def load_vgg(sess, vgg_path):
 tests.test_load_vgg(load_vgg, tf)
 
 
+def conv2d(input, filters, kernel_size, strides):
+    return tf.layers.conv2d(input, filters, kernel_size, strides, padding='same',
+                            kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3),
+                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+
+def conv2d_transpose(input, filters, kernel_size, strides):
+    return tf.layers.conv2d_transpose(input, filters, kernel_size, strides, padding='same',
+                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3),
+                                      kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+
 def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     """
     Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
@@ -56,21 +66,18 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # Layers are based on https://github.com/developmentseed/caffe-fcn/blob/master/fcn-8s/train_val.prototxt
-    score = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    score = conv2d(vgg_layer7_out, num_classes, 1, 1)
 
-    upscore2 = tf.layers.conv2d_transpose(score, num_classes, 4, 2, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-
-    score_pool4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    upscore2 = conv2d_transpose(score, num_classes, 4, 2)
+    score_pool4 = conv2d(vgg_layer4_out, num_classes, 1, 1)
 
     score_fused = tf.add(upscore2, score_pool4)
 
-    score4 = tf.layers.conv2d_transpose(score_fused, num_classes, 4, 2, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-
-    score_pool3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    score4 = conv2d_transpose(score_fused, num_classes, 4, 2)
+    score_pool3 = conv2d(vgg_layer3_out, num_classes, 1, 1)
 
     score_final = tf.add(score4, score_pool3)
-
-    bigscore = tf.layers.conv2d_transpose(score_final, num_classes, 16, 8, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    bigscore = conv2d_transpose(score_final, num_classes, 16, 8)
 
     return bigscore
 
@@ -100,6 +107,12 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
 tests.test_optimize(optimize)
 
 
+def get_epoch(checkpoint_file):
+    filename = os.path.basename(checkpoint_file)
+    parts = filename.split('.')[0].split('-')
+    return int(parts[-1])
+
+
 def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
              correct_label, keep_prob, learning_rate, checkpoint_dir = None):
     """
@@ -117,22 +130,34 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     """
     sess.run(tf.global_variables_initializer())
 
+    start_epoch = 0
+
     if checkpoint_dir:
-        saver = tf.train.Saver()
-        if not os.path.exists(checkpoint_dir):
+        saver = tf.train.Saver(max_to_keep = 10)
+        if os.path.exists(checkpoint_dir):
+            latest = tf.train.latest_checkpoint(checkpoint_dir)
+            if latest:
+                start_epoch = get_epoch(latest) + 1
+                saver.restore(sess, latest)
+                print('Restored latest checkpoint at epoch {}.'.format(start_epoch - 1))
+        else:
             os.makedirs(checkpoint_dir)
 
-    for i in range(epochs):
-        print('EPOCH {} of {}'.format(i+1, epochs))
+    stop_epoch = start_epoch + epochs
+
+    for i in range(start_epoch, stop_epoch):
+        print('EPOCH {} of {}'.format(i+1, stop_epoch))
         for images, labels in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss],
                                feed_dict = {input_image: images,
                                             correct_label: labels,
-                                            keep_prob: 0.5,
+                                            keep_prob: 0.2,
                                             learning_rate: 0.001})
         print('EPOCH {}, loss = {}'.format(i+1, loss))
+
         if checkpoint_dir:
-            saver.save(sess, os.path.join(checkpoint_dir, 'fcn-checkpoint'), global_step=i)
+            saver.save(sess, os.path.join(checkpoint_dir, 'checkpoint'), global_step = i)
+            print('Saved checkpoint at epoch {}'.format(i))
 
 tests.test_train_nn(train_nn)
 
@@ -167,8 +192,9 @@ def run():
         learning_rate = tf.placeholder(tf.float32)
         logits, train_op, cross_entropy_loss = optimize(score_final, correct_label, learning_rate, num_classes)
 
-        epochs = 5
+        epochs = 10
         batch_size = 1
+
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate, checkpoint_dir)
 
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
