@@ -47,6 +47,7 @@ tests.test_load_vgg(load_vgg, tf)
 
 
 def conv2d(input, filters, kernel_size, strides):
+    # l2_regularizer and truncated_normal_initializer are recommended by https://discussions.udacity.com/t/why-my-inference-images-have-green-dot-labeled-all-over-the-image/368946/5
     return tf.layers.conv2d(input, filters, kernel_size, strides, padding='same',
                             kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3),
                             kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
