@@ -1,4 +1,27 @@
 # Semantic Segmentation
+### Summary
+I trained a Fully Convolutional Network as described in [Long and Shelhamer's paper](https://people.eecs.berkeley.edu/~jonlong/long_shelhamer_fcn.pdf) to distinguish between road and non-road.
+
+### Final Hyperparameters
+ - Epochs: 16
+ - Batch size: 1
+ - Dropout probability: 0.2
+ - Learning rate: 0.001
+ - L2 regularization scale: 1e-3
+ - stddev for truncated_normal_initializer: 0.01
+
+### Experimentation
+ - I tried a batch size of 5, but the model results were poor after 5 epochs
+ - My dropout probability was originally 0.5, but the model had better results with 0.2
+ - The L2 regularization and truncated_normal_initializer also improved my model results
+
+### Example results
+ ![Simple road](img/um_000022.png)
+ ![Road with many cars](img/um_000061.png)
+ ![Road with cars and motorcycle](img/umm_000024.png)
+
+# Project Description
+
 ### Introduction
 In this project, you'll label the pixels of a road in images using a Fully Convolutional Network (FCN).
 
