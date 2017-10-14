@@ -128,7 +128,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             _, loss = sess.run([train_op, cross_entropy_loss],
                                feed_dict = {input_image: images,
                                             correct_label: labels,
-                                            keep_prob: 1.0,
+                                            keep_prob: 0.5,
                                             learning_rate: 0.001})
         print('EPOCH {}, loss = {}'.format(i+1, loss))
         if checkpoint_dir:
@@ -167,8 +167,8 @@ def run():
         learning_rate = tf.placeholder(tf.float32)
         logits, train_op, cross_entropy_loss = optimize(score_final, correct_label, learning_rate, num_classes)
 
-        epochs = 1
-        batch_size = 5
+        epochs = 5
+        batch_size = 1
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate, checkpoint_dir)
 
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
