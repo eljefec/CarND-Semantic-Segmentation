@@ -55,18 +55,23 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # Layers are based on https://github.com/developmentseed/caffe-fcn/blob/master/fcn-8s/train_val.prototxt
-    score = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1)
+    score = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
-    upscore2 = tf.layers.conv2d_transpose(score, num_classes, 4, 2)
-    score_pool4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1)
+    upscore2 = tf.layers.conv2d_transpose(score, num_classes, 4, 2, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+
+    score_pool4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+
     score_fused = tf.add(upscore2, score_pool4)
 
-    score4 = tf.layers.conv2d_transpose(score_fused, num_classes, 4, 2)
-    score_pool3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1)
+    score4 = tf.layers.conv2d_transpose(score_fused, num_classes, 4, 2, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+
+    score_pool3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     score_final = tf.add(score4, score_pool3)
 
-    return score_final
+    bigscore = tf.layers.conv2d_transpose(score_final, num_classes, 16, 8, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+
+    return bigscore
 
 tests.test_layers(layers)
 
